@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+Pillow
+ultralytics
+paddlepaddle
+paddleocr
+opencv-python

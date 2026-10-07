@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mall Parking — Gatekeeper</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #1e1e2f; color: #eee; margin: 0; padding: 20px; }
+  h1 { font-size: 20px; }
+  .container { display: flex; gap: 24px; flex-wrap: wrap; }
+  video, canvas { width: 480px; max-width: 100%; border-radius: 8px; background: #000; }
+  .panel { background: #2a2a40; padding: 16px; border-radius: 8px; min-width: 300px; }
+  button { padding: 10px 18px; font-size: 15px; border: none; border-radius: 6px; cursor: pointer; margin: 4px 4px 4px 0; }
+  .btn-primary { background: #4caf50; color: white; }
+  .btn-secondary { background: #2196f3; color: white; }
+  .btn-warn { background: #ff9800; color: white; }
+  input[type=text] { padding: 8px; border-radius: 4px; border: 1px solid #555; width: 200px; }
+  #status { margin-top: 12px; font-size: 15px; }
+  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
+           align-items:center; justify-content:center; }
+  .modal-box { background:#2a2a40; padding:24px; border-radius:8px; width:320px; }
+  #slotList span { display:inline-block; width:40px; height:40px; line-height:40px; text-align:center;
+                    margin:3px; border-radius:4px; font-size:13px; }
+  .free { background:#4caf50; }
+  .occupied { background:#f44336; }
+</style>
+</head>
+<body>
+
+<h1>🚗 Gate 1 — Gatekeeper Console</h1>
+
+<div class="container">
+  <div>
+    <video id="video" autoplay playsinline></video><br><br>
+    <button class="btn-primary" onclick="detectEntry()">Detect (Entry)</button>
+    <button class="btn-secondary" onclick="detectExit()">Detect (Exit)</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>Status</h3>
+    <div id="status">Waiting...</div>
+
+    <h3>Slots</h3>
+    <div id="slotList">Loading...</div>
+    <button class="btn-secondary" onclick="loadSlots()">Refresh Slots</button>
+  </div>
+</div>
+
+<!-- Popup for unregistered vehicles -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3>Unregistered Vehicle</h3>
+    <p id="modalPlate"></p>
+    <p>Suggested slot: <b id="modalSlot"></b></p>
+    <input type="text" id="mobileInput" placeholder="Enter mobile number">
+    <br><br>
+    <button class="btn-primary" onclick="confirmWithMobile()">Send WhatsApp</button>
+    <button class="btn-warn" onclick="confirmWithPrint()">Print Receipt Instead</button>
+  </div>
+</div>
+
+<script>
+const API = "http://localhost:8000";
+const GATE_ID = "gate_1";
+let currentPlate = null;
+let currentSlot = null;
+
+// --- live camera preview ---
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    document.getElementById('video').srcObject = stream;
+  } catch (err) {
+    document.getElementById('status').innerText = "Camera error: " + err.message;
+  }
+}
+startCamera();
+
+function captureFrame() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg"));
+}
+
+async function detectEntry() {
+  setStatus("Detecting plate...");
+  const blob = await captureFrame();
+  const formData = new FormData();
+  formData.append("gate_id", GATE_ID);
+  formData.append("image", blob, "frame.jpg");
+
+  const res = await fetch(`${API}/entry/detect`, { method: "POST", body: formData });
+  const data = await res.json();
+
+  if (data.status === "no_plate_detected") {
+    setStatus("❌ No plate detected. Try again.");
+  } else if (data.status === "full") {
+    setStatus(`⚠️ Parking full. Plate: ${data.plate_number}`);
+  } else if (data.status === "registered") {
+    setStatus(`✅ ${data.plate_number} recognized. Slot ${data.slot_id}. WhatsApp sent to ${data.mobile_number}.`);
+    loadSlots();
+  } else if (data.status === "unregistered") {
+    currentPlate = data.plate_number;
+    currentSlot = data.suggested_slot_id;
+    document.getElementById('modalPlate').innerText = "Plate: " + currentPlate;
+    document.getElementById('modalSlot').innerText = currentSlot;
+    document.getElementById('modal').style.display = "flex";
+  }
+}
+
+async function confirmWithMobile() {
+  const mobile = document.getElementById('mobileInput').value.trim();
+  if (!mobile) { alert("Enter a mobile number"); return; }
+
+  const formData = new FormData();
+  formData.append("plate_number", currentPlate);
+  formData.append("mobile_number", mobile);
+  formData.append("slot_id", currentSlot);
+  formData.append("gate_id", GATE_ID);
+
+  const res = await fetch(`${API}/entry/confirm`, { method: "POST", body: formData });
+  const data = await res.json();
+  setStatus(`✅ ${currentPlate} assigned slot ${data.slot_id}. WhatsApp sent.`);
+  closeModal();
+  loadSlots();
+}
+
+async function confirmWithPrint() {
+  const formData = new FormData();
+  formData.append("plate_number", currentPlate);
+  formData.append("slot_id", currentSlot);
+  formData.append("gate_id", GATE_ID);
+
+  const res = await fetch(`${API}/entry/print`, { method: "POST", body: formData });
+  const data = await res.json();
+  setStatus(`✅ ${currentPlate} assigned slot ${data.slot_id}. Receipt printed.`);
+  closeModal();
+  loadSlots();
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = "none";
+  document.getElementById('mobileInput').value = "";
+}
+
+async function detectExit() {
+  setStatus("Detecting plate for exit...");
+  const blob = await captureFrame();
+  const formData = new FormData();
+  formData.append("gate_id", GATE_ID);
+  formData.append("image", blob, "frame.jpg");
+
+  const res = await fetch(`${API}/exit/detect`, { method: "POST", body: formData });
+  const data = await res.json();
+
+  if (data.status === "exited") {
+    setStatus(`👋 ${data.plate_number} exited. Slot ${data.slot_id} is now free.`);
+    loadSlots();
+  } else if (data.status === "no_active_session") {
+    setStatus(`⚠️ No active session found for ${data.plate_number}.`);
+  } else {
+    setStatus("❌ No plate detected. Try again.");
+  }
+}
+
+async function loadSlots() {
+  const res = await fetch(`${API}/slots`);
+  const slots = await res.json();
+  document.getElementById('slotList').innerHTML = slots
+    .map(s => `<span class="${s.status}">${s.slot_id}</span>`)
+    .join("");
+}
+
+function setStatus(msg) {
+  document.getElementById('status').innerText = msg;
+}
+
+loadSlots();
+</script>
+
+</body>
+</html>
