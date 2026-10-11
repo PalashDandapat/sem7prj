@@ -9,7 +9,7 @@ slot assignment. Exit flow frees the slot.
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate        # on Windows: venv\Scripts\activate
+venv\Scripts\activate       # on Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python database.py             # creates parking.db with sample data
 uvicorn main:app --reload --port 8000

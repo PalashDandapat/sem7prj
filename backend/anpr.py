@@ -104,7 +104,7 @@ def clean_plate_text(text: str) -> str:
 # ------------------------------------------------- the function main.py calls
 def detect_plate(image_bytes: bytes) -> str | None:
     """
-    Takes raw image bytes (one frame from the gate camera) and returns the
+    Takes raw image bytes and returns the
     plate number as a string like "OD02AB1234", or None if nothing was read.
     """
     # bytes -> OpenCV image (BGR), entirely in memory

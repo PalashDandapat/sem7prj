@@ -2,60 +2,278 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Mall Parking — Gatekeeper</title>
+<title>Mall Parking System</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #1e1e2f; color: #eee; margin: 0; padding: 20px; }
-  h1 { font-size: 20px; }
-  .container { display: flex; gap: 24px; flex-wrap: wrap; }
-  video, canvas { width: 480px; max-width: 100%; border-radius: 8px; background: #000; }
-  .panel { background: #2a2a40; padding: 16px; border-radius: 8px; min-width: 300px; }
-  button { padding: 10px 18px; font-size: 15px; border: none; border-radius: 6px; cursor: pointer; margin: 4px 4px 4px 0; }
-  .btn-primary { background: #4caf50; color: white; }
-  .btn-secondary { background: #2196f3; color: white; }
-  .btn-warn { background: #ff9800; color: white; }
-  input[type=text] { padding: 8px; border-radius: 4px; border: 1px solid #555; width: 200px; }
-  #status { margin-top: 12px; font-size: 15px; }
-  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
-           align-items:center; justify-content:center; }
-  .modal-box { background:#2a2a40; padding:24px; border-radius:8px; width:320px; }
-  #slotList span { display:inline-block; width:40px; height:40px; line-height:40px; text-align:center;
-                    margin:3px; border-radius:4px; font-size:13px; }
-  .free { background:#4caf50; }
-  .occupied { background:#f44336; }
+  :root {
+    --navy: #0f2744;
+    --navy-light: #16365c;
+    --green: #22a559;
+    --green-bg: #e8f7ee;
+    --blue: #2d7ff9;
+    --blue-bg: #eaf2ff;
+    --grey-bg: #f4f6f9;
+    --card-bg: #ffffff;
+    --border: #e4e8ee;
+    --text: #1b2430;
+    --text-dim: #6b7685;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--grey-bg);
+    color: var(--text);
+  }
+
+  /* ---- Header ---- */
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .logo {
+    width: 42px; height: 42px; background: var(--blue);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 20px;
+  }
+  .brand h1 { font-size: 19px; margin: 0; font-weight: 600; }
+  .brand .tagline { font-size: 11px; color: #9fb3cc; letter-spacing: 0.4px; margin-top: 2px; }
+  .header-right { text-align: right; font-size: 13px; color: #cdd9e8; }
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #3ddc84; margin-right: 6px;
+  }
+
+  /* ---- Layout ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr 1.15fr;
+    gap: 18px;
+    padding: 20px;
+    align-items: start;
+  }
+  .grid > * { min-width: 0; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .card h2 {
+    font-size: 16px;
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .live-tag { font-size: 12px; color: var(--green); font-weight: 600; }
+  .live-tag::before { content: "● "; }
+
+  /* ---- Camera panel ---- */
+  video { width: 100%; border-radius: 8px; background: #0a0a0a; display: block; }
+  canvas { display: none; }
+
+  .quick-actions { margin-top: 16px; }
+  .quick-actions h3 { font-size: 14px; color: var(--text-dim); margin: 0 0 10px 0; font-weight: 600; }
+  .action-row { display: flex; gap: 10px; }
+  .action-btn {
+    flex: 1; border: none; border-radius: 8px; padding: 16px 10px;
+    cursor: pointer; font-size: 14px; font-weight: 600; color: white;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .action-btn small { font-weight: 400; font-size: 11px; opacity: 0.85; }
+  .entry-btn { background: var(--green); }
+  .exit-btn { background: var(--blue); }
+  .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* ---- Overview ---- */
+  .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat-box {
+    flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .stat-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; flex: none;
+  }
+  .stat-icon.green { background: var(--green); }
+  .stat-icon.blue { background: var(--blue); }
+  .stat-label { font-size: 12px; color: var(--text-dim); }
+  .stat-value { font-size: 20px; font-weight: 700; }
+
+  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .progress-fill { height: 100%; background: var(--green); transition: width 0.3s; }
+  .capacity-label { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+
+  /* ---- Activity feed ---- */
+  .activity-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-icon {
+    width: 28px; height: 28px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center; color: white; font-size: 13px;
+  }
+  .activity-icon.entry { background: var(--green); }
+  .activity-icon.exit { background: var(--blue); }
+  .activity-main { flex: 1; font-size: 13px; }
+  .activity-top { display: flex; justify-content: space-between; color: var(--text-dim); font-size: 11px; }
+  .activity-plate { font-weight: 600; font-size: 13.5px; margin-top: 1px; }
+  .activity-slot { color: var(--text-dim); font-size: 12px; }
+  .pill { font-size: 11px; padding: 3px 9px; border-radius: 12px; font-weight: 600; align-self: start; }
+  .pill.parked { background: var(--green-bg); color: var(--green); }
+  .pill.freed { background: var(--blue-bg); color: var(--blue); }
+
+  /* ---- Slots panel ---- */
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-dim); align-items: center; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px;
+  }
+  .legend .l-free::before { background: var(--green); }
+  .legend .l-occ::before { background: var(--blue); }
+
+  .zone-label { font-size: 13px; font-weight: 600; color: var(--text-dim); margin: 14px 0 8px 0; }
+  .zone-label:first-of-type { margin-top: 0; }
+  .slot-grid {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;        /* the right-scroll */
+    padding-bottom: 8px;     /* room for the scrollbar */
+  }
+  .slot {
+    flex: 0 0 56px;          /* fixed width, never shrinks */
+    height: 44px;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: white; cursor: default;
+  }
+  .slot.free { background: var(--green); }
+  .slot.occupied { background: var(--blue); }
+
+  .hint { margin-top: 14px; font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
+  .hint .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--grey-bg); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-dim); flex: none; }
+
+  #globalStatus { font-size: 13px; color: var(--text-dim); margin-top: 10px; min-height: 18px; }
+
+  /* ---- Modal ---- */
+  .modal {
+    display: none; position: fixed; inset: 0; background: rgba(15,39,68,0.55);
+    align-items: center; justify-content: center; z-index: 10;
+  }
+  .modal-box { background: white; padding: 24px; border-radius: 10px; width: 320px; }
+  .modal-box h3 { margin-top: 0; font-size: 16px; }
+  .modal-box input {
+    width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border);
+    font-size: 14px; margin: 10px 0;
+  }
+  .modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .modal-actions button {
+    border: none; border-radius: 6px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; color: white;
+  }
+  .btn-send { background: var(--green); }
+  .btn-print { background: var(--blue); }
+  .btn-cancel { background: transparent; color: var(--text-dim); font-weight: 500; }
 </style>
 </head>
 <body>
 
-<h1>🚗 Gate 1 — Gatekeeper Console</h1>
+<header>
+  <div class="brand">
+    <div class="logo">P</div>
+    <div>
+      <h1>Mall Parking System</h1>
+      <div class="tagline">SMART PARKING &nbsp;|&nbsp; SAFE PARKING &nbsp;|&nbsp; BETTER EXPERIENCE</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="clock">—</div>
+    <div style="margin-top:4px;"><span class="status-dot"></span>System Online</div>
+  </div>
+</header>
 
-<div class="container">
+<div class="grid">
+
+  <!-- Camera / Quick Actions -->
+  <div class="card">
+    <h2>Live Entry Gate Feed <span class="live-tag">Live</span></h2>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+
+    <div class="quick-actions">
+      <h3>Quick Actions</h3>
+      <div class="action-row">
+        <button class="action-btn entry-btn" id="entryBtn" onclick="detectEntry()">
+          🚗 Entry <small>Scan &amp; Assign</small>
+        </button>
+        <button class="action-btn exit-btn" id="exitBtn" onclick="detectExit()">
+          ⏎ Exit <small>Release Slot</small>
+        </button>
+      </div>
+      <div id="globalStatus">Waiting...</div>
+    </div>
+  </div>
+
+  <!-- Overview + Activity -->
   <div>
-    <video id="video" autoplay playsinline></video><br><br>
-    <button class="btn-primary" onclick="detectEntry()">Detect (Entry)</button>
-    <button class="btn-secondary" onclick="detectExit()">Detect (Exit)</button>
-    <canvas id="canvas" style="display:none;"></canvas>
+    <div class="card" style="margin-bottom:18px;">
+      <h2>Parking Overview</h2>
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="stat-icon green">🚗</div>
+          <div>
+            <div class="stat-label">Active Parking</div>
+            <div class="stat-value"><span id="occCount">0</span> / <span id="totalCount">0</span></div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon blue">P</div>
+          <div>
+            <div class="stat-label">Free Slots</div>
+            <div class="stat-value" id="freeCount">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
+      <div class="capacity-label">Total Capacity: <span id="capacityLabel">0</span> Slots</div>
+    </div>
+
+    <div class="card">
+      <h2>Recent Activity</h2>
+      <div id="activityList"><div class="activity-item">No activity yet.</div></div>
+    </div>
   </div>
 
-  <div class="panel">
-    <h3>Status</h3>
-    <div id="status">Waiting...</div>
-
-    <h3>Slots</h3>
-    <div id="slotList">Loading...</div>
-    <button class="btn-secondary" onclick="loadSlots()">Refresh Slots</button>
+  <!-- Slots -->
+  <div class="card">
+    <h2>
+      Parking Slots
+      <span class="legend">
+        <span class="l-free">Available</span>
+        <span class="l-occ">Occupied</span>
+      </span>
+    </h2>
+    <div id="slotsContainer">Loading...</div>
+    <div class="hint"><span class="dot">P</span> Click Refresh after any entry/exit to update this view.</div>
   </div>
+
 </div>
 
-<!-- Popup for unregistered vehicles -->
+<!-- Unregistered vehicle modal -->
 <div class="modal" id="modal">
   <div class="modal-box">
     <h3>Unregistered Vehicle</h3>
-    <p id="modalPlate"></p>
-    <p>Suggested slot: <b id="modalSlot"></b></p>
+    <p id="modalPlate" style="margin:0; font-weight:600;"></p>
+    <p style="color:var(--text-dim); font-size:13px;">Suggested slot: <b id="modalSlot"></b></p>
     <input type="text" id="mobileInput" placeholder="Enter mobile number">
-    <br><br>
-    <button class="btn-primary" onclick="confirmWithMobile()">Send WhatsApp</button>
-    <button class="btn-warn" onclick="confirmWithPrint()">Print Receipt Instead</button>
+    <div class="modal-actions">
+      <button class="btn-send" onclick="confirmWithMobile()">Send WhatsApp</button>
+      <button class="btn-print" onclick="confirmWithPrint()">Print Receipt Instead</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -65,13 +283,24 @@ const GATE_ID = "gate_1";
 let currentPlate = null;
 let currentSlot = null;
 
-// --- live camera preview ---
+// ---- Clock ----
+function tickClock() {
+  const now = new Date();
+  const opts = { day: "2-digit", month: "short", year: "numeric" };
+  document.getElementById('clock').innerText =
+    now.toLocaleDateString('en-GB', opts) + "  |  " +
+    now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+tickClock();
+setInterval(tickClock, 1000 * 30);
+
+// ---- Camera ----
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     document.getElementById('video').srcObject = stream;
   } catch (err) {
-    document.getElementById('status').innerText = "Camera error: " + err.message;
+    setStatus("Camera error: " + err.message);
   }
 }
 startCamera();
@@ -79,42 +308,61 @@ startCamera();
 function captureFrame() {
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
   return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg"));
 }
 
+function setStatus(msg) {
+  document.getElementById('globalStatus').innerText = msg;
+}
+
+function setButtonsEnabled(enabled) {
+  document.getElementById('entryBtn').disabled = !enabled;
+  document.getElementById('exitBtn').disabled = !enabled;
+}
+
+// ---- Entry ----
 async function detectEntry() {
+  setButtonsEnabled(false);
   setStatus("Detecting plate...");
   const blob = await captureFrame();
   const formData = new FormData();
   formData.append("gate_id", GATE_ID);
   formData.append("image", blob, "frame.jpg");
 
-  const res = await fetch(`${API}/entry/detect`, { method: "POST", body: formData });
-  const data = await res.json();
+  try {
+    const res = await fetch(`${API}/entry/detect`, { method: "POST", body: formData });
+    const data = await res.json();
 
-  if (data.status === "no_plate_detected") {
-    setStatus("❌ No plate detected. Try again.");
-  } else if (data.status === "full") {
-    setStatus(`⚠️ Parking full. Plate: ${data.plate_number}`);
-  } else if (data.status === "registered") {
-    setStatus(`✅ ${data.plate_number} recognized. Slot ${data.slot_id}. WhatsApp sent to ${data.mobile_number}.`);
-    loadSlots();
-  } else if (data.status === "unregistered") {
-    currentPlate = data.plate_number;
-    currentSlot = data.suggested_slot_id;
-    document.getElementById('modalPlate').innerText = "Plate: " + currentPlate;
-    document.getElementById('modalSlot').innerText = currentSlot;
-    document.getElementById('modal').style.display = "flex";
+    if (data.status === "no_plate_detected") {
+      setStatus("No plate detected. Try again.");
+    }  else if (data.status === "parked") {
+    setStatus(`${data.plate_number} is already parked at slot ${data.slot_id}.`);
+    }
+  
+    else if (data.status === "full") {
+      setStatus(`Parking full. Plate: ${data.plate_number}`);
+    } else if (data.status === "registered") {
+      setStatus(`${data.plate_number} parked at slot ${data.slot_id}. WhatsApp sent.`);
+      refreshAll();
+    } else if (data.status === "unregistered") {
+      currentPlate = data.plate_number;
+      currentSlot = data.suggested_slot_id;
+      document.getElementById('modalPlate').innerText = "Plate: " + currentPlate;
+      document.getElementById('modalSlot').innerText = currentSlot;
+      document.getElementById('modal').style.display = "flex";
+    }
+  } catch (e) {
+    setStatus("Error reaching server: " + e.message);
   }
+  setButtonsEnabled(true);
 }
 
 async function confirmWithMobile() {
   const mobile = document.getElementById('mobileInput').value.trim();
   if (!mobile) { alert("Enter a mobile number"); return; }
-
   const formData = new FormData();
   formData.append("plate_number", currentPlate);
   formData.append("mobile_number", mobile);
@@ -123,9 +371,9 @@ async function confirmWithMobile() {
 
   const res = await fetch(`${API}/entry/confirm`, { method: "POST", body: formData });
   const data = await res.json();
-  setStatus(`✅ ${currentPlate} assigned slot ${data.slot_id}. WhatsApp sent.`);
+  setStatus(`${currentPlate} parked at slot ${data.slot_id}. WhatsApp sent.`);
   closeModal();
-  loadSlots();
+  refreshAll();
 }
 
 async function confirmWithPrint() {
@@ -136,9 +384,9 @@ async function confirmWithPrint() {
 
   const res = await fetch(`${API}/entry/print`, { method: "POST", body: formData });
   const data = await res.json();
-  setStatus(`✅ ${currentPlate} assigned slot ${data.slot_id}. Receipt printed.`);
+  setStatus(`${currentPlate} parked at slot ${data.slot_id}. Receipt printed.`);
   closeModal();
-  loadSlots();
+  refreshAll();
 }
 
 function closeModal() {
@@ -146,39 +394,105 @@ function closeModal() {
   document.getElementById('mobileInput').value = "";
 }
 
+// ---- Exit ----
 async function detectExit() {
+  setButtonsEnabled(false);
   setStatus("Detecting plate for exit...");
   const blob = await captureFrame();
   const formData = new FormData();
   formData.append("gate_id", GATE_ID);
   formData.append("image", blob, "frame.jpg");
 
-  const res = await fetch(`${API}/exit/detect`, { method: "POST", body: formData });
-  const data = await res.json();
+  try {
+    const res = await fetch(`${API}/exit/detect`, { method: "POST", body: formData });
+    const data = await res.json();
 
-  if (data.status === "exited") {
-    setStatus(`👋 ${data.plate_number} exited. Slot ${data.slot_id} is now free.`);
-    loadSlots();
-  } else if (data.status === "no_active_session") {
-    setStatus(`⚠️ No active session found for ${data.plate_number}.`);
-  } else {
-    setStatus("❌ No plate detected. Try again.");
+    if (data.status === "exited") {
+      setStatus(`${data.plate_number} exited. Slot ${data.slot_id} is now free.`);
+      refreshAll();
+    } else if (data.status === "no_active_session") {
+      setStatus(`No active session found for ${data.plate_number}.`);
+    } else {
+      setStatus("No plate detected. Try again.");
+    }
+  } catch (e) {
+    setStatus("Error reaching server: " + e.message);
   }
+  setButtonsEnabled(true);
 }
 
+// ---- Overview ----
+async function loadOverview() {
+  const res = await fetch(`${API}/overview`);
+  const d = await res.json();
+  document.getElementById('occCount').innerText = d.occupied;
+  document.getElementById('totalCount').innerText = d.total_slots;
+  document.getElementById('freeCount').innerText = d.free;
+  document.getElementById('capacityLabel').innerText = d.total_slots;
+  const pct = d.total_slots ? Math.round((d.occupied / d.total_slots) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + "%";
+}
+
+// ---- Activity ----
+function timeAgoLabel(isoString) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadActivity() {
+  const res = await fetch(`${API}/activity`);
+  const events = await res.json();
+  const container = document.getElementById('activityList');
+  if (!events.length) {
+    container.innerHTML = '<div class="activity-item">No activity yet.</div>';
+    return;
+  }
+  container.innerHTML = events.map(ev => {
+    const isEntry = ev.type === "entry";
+    return `
+      <div class="activity-item">
+        <div class="activity-icon ${isEntry ? 'entry' : 'exit'}">${isEntry ? '🚗' : '⏎'}</div>
+        <div class="activity-main">
+          <div class="activity-top">
+            <span>${timeAgoLabel(ev.time)}</span>
+          </div>
+          <div class="activity-plate">${ev.plate_number}</div>
+          <div class="activity-slot">Slot ${ev.slot_id}</div>
+        </div>
+        <span class="pill ${isEntry ? 'parked' : 'freed'}">${isEntry ? 'Parked' : 'Slot Freed'}</span>
+      </div>`;
+  }).join("");
+}
+
+// ---- Slots grid ----
 async function loadSlots() {
   const res = await fetch(`${API}/slots`);
   const slots = await res.json();
-  document.getElementById('slotList').innerHTML = slots
-    .map(s => `<span class="${s.status}">${s.slot_id}</span>`)
-    .join("");
+  const zones = {};
+  slots.forEach(s => {
+    const zone = s.slot_id.replace(/[0-9]/g, '');
+    if (!zones[zone]) zones[zone] = [];
+    zones[zone].push(s);
+  });
+
+  const container = document.getElementById('slotsContainer');
+  container.innerHTML = Object.keys(zones).sort().map(zone => `
+    <div class="zone-label">Zone ${zone}</div>
+    <div class="slot-grid">
+      ${zones[zone].map(s => `<div class="slot ${s.status}">${s.slot_id}</div>`).join("")}
+    </div>
+  `).join("");
 }
 
-function setStatus(msg) {
-  document.getElementById('status').innerText = msg;
+async function refreshAll() {
+  loadOverview();
+  loadActivity();
+  loadSlots();
 }
 
-loadSlots();
+refreshAll();
+setInterval(refreshAll, 15000); // auto-refresh every 15s
 </script>
 
 </body>

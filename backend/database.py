@@ -46,11 +46,28 @@ def init_db():
     );
     """)
 
-    # Seed some parking slots if empty
+    # Seed some parking slots if empty — 4 zones x 8 slots, change ZONES/PER_ZONE to resize
+    # cur.execute("SELECT COUNT(*) FROM slots")
+    # if cur.fetchone()[0] == 0:
+    #     ZONES = ["A", "B", "C", "D"]
+    #     PER_ZONE = 8
+    #     slots = [
+    #         (f"{zone}{i:02d}", "gate_1", "free")
+    #         for zone in ZONES
+    #         for i in range(1, PER_ZONE + 1)
+    #     ]
+    #     cur.executemany("INSERT INTO slots (slot_id, gate_id, status) VALUES (?, ?, ?)", slots)
+
     cur.execute("SELECT COUNT(*) FROM slots")
     if cur.fetchone()[0] == 0:
-        slots = [(f"A{i}", "gate_1", "free") for i in range(1, 6)]
+        ZONES = {"A": 6, "B": 20, "C": 8, "D": 12}   # zone -> number of slots
+        slots = [
+            (f"{zone}{i:02d}", "gate_1", "free")
+            for zone, count in ZONES.items()
+            for i in range(1, count + 1)
+        ]
         cur.executemany("INSERT INTO slots (slot_id, gate_id, status) VALUES (?, ?, ?)", slots)
+
 
     # Seed one known vehicle for testing the "registered" path
     cur.execute("SELECT COUNT(*) FROM vehicles")
